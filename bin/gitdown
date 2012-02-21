@@ -191,7 +191,7 @@ sub die_usage {
     print "Syntax: gitdoc [options] textfilename\n";
     print "  Version $version\n\n";
     print "  --help		display this message\n";
-    print "  --to_local		override symbols and make images be relative\n";
+    print "  --to-local		override symbols and make images be relative\n";
     print "			to local directory\n";
     print "  --nofunc-mode		disable intrinsic function errors\n";
     print "\n";
