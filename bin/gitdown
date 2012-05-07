@@ -23,6 +23,9 @@ use strict;
 use File::Basename;
 use Getopt::Long;
 
+# for sequence diagrams
+use LWP::UserAgent;
+
 # push gitdown path to include for modules
 my $path = dirname(__FILE__);
 push (@INC, $path);
@@ -32,6 +35,14 @@ require 'sflcvdp.pl';                   #   SFL date picture formatting
 
 my $version = "2010.10.09";
 my $ditaa = "java -jar $path/ditaa0_9.jar";
+my $seqdiag_url = "http://www.websequencediagrams.com/index.php";
+my %seqdiag_req = (
+    style => 'default',
+    apiVersion => '1',
+    format => 'png',
+    paginate => '0',
+    landscape => '0',
+);
 
 my $to_local = 0;
 my $nofunc_mode = 0;
@@ -96,6 +107,7 @@ $symbols {"BRANCH"} = "master";
 my ($EOD, $prev, %subsset, $tocl);
 my $line = 0;
 my $diagram = 0;
+my @seqdiag;
 my $have_errors = 0;
 my $imgpath = $to_local ? "images/" : &gen_imgpath;
 
@@ -168,6 +180,19 @@ while ($line < @inbuf) {
         writeln ("<img src=\"$imgpath$self\_$diagram.png\" alt=\"$diagram\">");
         writeln ("</center>");
     }
+    elsif ($_ eq "[seqdiag]") {
+        my $newdiag = '';
+        while ($line < @inbuf) {
+            $_ = $inbuf [$line++];
+            last if /\[\/seqdiag\]/;
+            $newdiag .= $_."\n";
+        }
+
+        my $seqno = push(@seqdiag, $newdiag);
+        writeln ("<center>");
+        writeln ("<img src=\"$imgpath$self\_seqdiag_$seqno.png\" alt=\"$seqno\">");
+        writeln ("</center>");
+    }
     else {
         #   Normal text
         writeln ($_);
@@ -184,6 +209,27 @@ if ($diagram) {
     system ("mogrify -trim images/$self\_*.png");
     system ("mogrify -trim images/$self\_*.png");
 }
+
+my $seqidx = 0;
+foreach (@seqdiag) {
+  $seqidx = $seqidx + 1;
+  $seqdiag_req{'message'} = $_;
+
+  my $ua = LWP::UserAgent->new;
+  my $res = $ua->post($seqdiag_url, [%seqdiag_req]);
+  $res->is_success or die "Failed to get seqdiag\n";
+
+  my $imgurl = $res->content;
+  if ($imgurl =~ m/"(\?png=[^"]+)"/) {
+    $imgurl = $1;
+  } else {
+    die "Failed to get seqdiag url\n";
+  }
+
+  $res = $ua->get($seqdiag_url.$imgurl, ':content_file' => "images/$self\_seqdiag_$seqidx.png");
+  $res->is_success or die "Failed to get seqdiag image\n";
+}
+
 system ("rm -f output.html images.html");
 exit ($have_errors);
 
