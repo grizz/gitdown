@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+
+CHROME=`which google-chrome 2>/dev/null`
+
+if test -z "$CHROME"; then
+  CHROME=`which chromium 2>/dev/null`
+fi
+
+if test -z "$CHROME"; then
+  echo chrome not found
+  exit 1
+fi
+
+MARKDOWN=`which markdown2 2>/dev/null`
+if test -z "$MARKDOWN"; then
+  MARKDOWN=`which markdown 2>/dev/null`
+fi
+if test -z "$MARKDOWN"; then
+  echo markdown not found
+  exit 1
+fi
+
+function view_file
+  {
+  file=$1
+
+  if [ -f $file ] ; then
+    base=${file%\.txt}
+    html=$base.html
+    gitdown --to-local $file > /dev/null 2>&1
+    markdown2 $base.md > $html 2>/dev/null
+    echo "[+] $html"
+    $CHROME $html > /dev/null 2>&1
+  fi
+  }
+
+if test -f "$1"; then
+  view_file $1
+else
+  for file in `ls *.txt|egrep -v 'CMakeLists|CMakeCache|local.cmake|requirements.txt'`; do
+    view_file $file
+  done
+fi
